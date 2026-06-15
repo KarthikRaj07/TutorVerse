@@ -27,15 +27,15 @@ pipeline {
             }
         }
 
-        // stage('Push Images') {
-        //     steps {
-        //         withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-        //             sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-        //             sh "docker push ${BACKEND_IMAGE}:latest"
-        //             sh "docker push ${FRONTEND_IMAGE}:latest"
-        //         }
-        //     }
-        // }
+        stage('Push Images') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+                    sh "docker push ${BACKEND_IMAGE}:latest"
+                    sh "docker push ${FRONTEND_IMAGE}:latest"
+                }
+            }
+        }
 
         stage('Deploy') {
             steps {
