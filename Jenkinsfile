@@ -38,12 +38,8 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh '''
-                cd /home/karthiii/Documents/TutorVerse
-                git pull origin main
-                docker compose down || true
-                docker compose up --build -d
-                '''
+                sh 'docker compose down || true'
+                sh 'docker compose up --build -d'
             }
         }
     }
