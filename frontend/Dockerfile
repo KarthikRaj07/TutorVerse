@@ -11,7 +11,7 @@ WORKDIR /app
 
 # Install deps first (better Docker layer caching)
 COPY package.json package-lock.json ./
-RUN npm ci --frozen-lockfile
+RUN npm install
 
 # Copy source and build the Vite + React + Tailwind app
 COPY . .
