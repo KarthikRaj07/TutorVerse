@@ -3,6 +3,7 @@ pipeline {
 
     triggers {
         githubPush()
+        pollSCM('* * * * *') // Checks GitHub for changes every minute (perfect for local Jenkins)
     }
 
     environment {
