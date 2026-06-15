@@ -1,29 +1,67 @@
-version: "3.9"
+# ──────────────────────────────────────────────────────────────
+# TutorVerse — Docker Compose
+# Services: backend (FastAPI) · frontend (React/Vite/Nginx)
+#           ollama (Llama3 LLM)
+# ──────────────────────────────────────────────────────────────
 
 services:
-  backend:
-    build: ./backend
-    container_name: fastapi_app
-    ports:
-      - "8000:8000"
-    env_file:
-      - ./backend/.env
 
-  frontend:
-    build: ./frontend
-    container_name: react_app
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
-
+  # ── Ollama (LLM) ─────────────────────────────────────────────
   ollama:
-    image: ollama/ollama
+    image: ollama/ollama:latest
     container_name: ollama
+    restart: unless-stopped
     ports:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+    # Use `ollama list` — it's always available inside the ollama image
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
+  # ── FastAPI Backend ───────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fastapi_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      # Point to ollama service inside the Docker network
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: llama3
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+
+  # ── React Frontend (Nginx) ────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: react_app
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+# ── Named Volumes ─────────────────────────────────────────────
 volumes:
   ollama_data:
+    driver: local

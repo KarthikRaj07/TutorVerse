@@ -5,10 +5,11 @@ import requests
 from typing import List, Optional
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pinecone import Pinecone, ServerlessSpec
+from contextlib import asynccontextmanager
 
 load_dotenv()
 
@@ -22,11 +23,15 @@ OLLAMA_MODEL     = os.getenv("OLLAMA_MODEL", "llama3")
 EMBED_DIM        = 1024  # Must match the existing Pinecone index dimension
 
 # ──────────────────────────────────────────────
-# Pinecone client
+# FastAPI app
 # ──────────────────────────────────────────────
 pc = Pinecone(api_key=PINECONE_API_KEY)
+index = None # Will be initialized dynamically
 
 def get_or_create_index():
+    global index
+    if index is not None:
+        return index
     existing = [idx.name for idx in pc.list_indexes()]
     if PINECONE_INDEX not in existing:
         pc.create_index(
@@ -35,14 +40,21 @@ def get_or_create_index():
             metric="cosine",
             spec=ServerlessSpec(cloud="aws", region="us-east-1"),
         )
-    return pc.Index(PINECONE_INDEX)
+    index = pc.Index(PINECONE_INDEX)
+    return index
 
-index = get_or_create_index()
-
-# ──────────────────────────────────────────────
-# FastAPI app
-# ──────────────────────────────────────────────
-app = FastAPI(title="TutorVerse API", version="1.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize index on startup
+    try:
+        get_or_create_index()
+        print("Pinecone index initialized")
+    except Exception as e:
+        print(f"Warning: Failed to initialize Pinecone index at startup: {e}")
+    yield
+    # Cleanup if needed
+    
+app = FastAPI(title="TutorVerse API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -116,9 +128,10 @@ def ollama_generate(prompt: str) -> str:
 def retrieve_context(query: str, subject: str, top_k: int = 3):
     """Query Pinecone for similar content."""
     try:
+        idx = get_or_create_index()
         vec = text_to_vector(query)
         filter_map = {"subject": {"$eq": subject}} if subject != "general" else {}
-        results = index.query(vector=vec, top_k=top_k, include_metadata=True, filter=filter_map)
+        results = idx.query(vector=vec, top_k=top_k, include_metadata=True, filter=filter_map)
         matches = results.get("matches", [])
         contexts, titles = [], []
         for m in matches:
@@ -166,9 +179,10 @@ def health_check():
 @app.post("/ingest", response_model=IngestResponse, tags=["knowledge"])
 def ingest_content(req: IngestRequest):
     """Store educational content into Pinecone vector database."""
+    idx = get_or_create_index()
     doc_id = str(uuid.uuid4())
     vec = text_to_vector(req.content)
-    index.upsert(
+    idx.upsert(
         vectors=[{
             "id": doc_id,
             "values": vec,
@@ -228,7 +242,8 @@ def list_subjects():
 def delete_document(doc_id: str):
     """Delete a document from Pinecone by ID."""
     try:
-        index.delete(ids=[doc_id])
+        idx = get_or_create_index()
+        idx.delete(ids=[doc_id])
         return {"message": f"Document {doc_id} deleted"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

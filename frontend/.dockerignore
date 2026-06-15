@@ -1,0 +1,15 @@
+# Node artifacts
+node_modules/
+dist/
+.npm
+
+# Dev/CI files
+.git/
+.gitignore
+*.md
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/

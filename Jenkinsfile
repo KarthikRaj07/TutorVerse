@@ -1,17 +1,21 @@
 pipeline {
     agent any
 
+    triggers {
+        githubPush()
+    }
+
     environment {
         DOCKERHUB_CREDENTIALS = 'dockerhub-creds'
-        BACKEND_IMAGE = 'yourname/fastapi-app'
-        FRONTEND_IMAGE = 'yourname/react-app'
+        BACKEND_IMAGE = 'KarthikRaj07/fastapi-app'
+        FRONTEND_IMAGE = 'KarthikRaj07/react-app'
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                git 'https://github.com/your-repo.git'
+                git 'https://github.com/KarthikRaj07/TutorVerse.git'
             }
         }
 
