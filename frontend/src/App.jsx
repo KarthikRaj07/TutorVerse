@@ -52,6 +52,8 @@ function StatusDot({ label, value }) {
 // ── Typing indicator ─────────────────────────────────────────────────────────
 function TypingBubble() {
   return (
+
+    
     <div className="flex items-center gap-1 px-4 py-3 rounded-2xl w-fit"
       style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
       {[0, 150, 300].map((d) => (
@@ -93,6 +95,8 @@ function Message({ msg }) {
               <span key={i} className="text-xs px-2 py-0.5 rounded-full"
                 style={{ background: 'var(--accent-glow)', color: 'var(--accent-light)', border: '1px solid var(--border)' }}>
                 📚 {s}
+
+                <h1>Jennkins test</h1>
               </span>
             ))}
           </div>
