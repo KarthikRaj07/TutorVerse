@@ -8,8 +8,8 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = 'docker-creds'
-        BACKEND_IMAGE = 'KarthikRaj07/fastapi-app'
-        FRONTEND_IMAGE = 'KarthikRaj07/react-app'
+        BACKEND_IMAGE = 'karthikraj07/fastapi-app'
+        FRONTEND_IMAGE = 'karthikraj07/react-app'
     }
 
     stages {
