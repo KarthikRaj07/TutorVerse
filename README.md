@@ -10,7 +10,7 @@ docker compose up --build -d
 
 ```
 
-## Access the applicationss
+## Access the application
 
 - Backend: http://localhost:8000
 - Frontend: http://localhost:8080
