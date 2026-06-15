@@ -6,7 +6,7 @@ pipeline {
     }
 
     environment {
-        DOCKERHUB_CREDENTIALS = 'dockerhub-creds'
+        DOCKERHUB_CREDENTIALS = 'docker-creds'
         BACKEND_IMAGE = 'KarthikRaj07/fastapi-app'
         FRONTEND_IMAGE = 'KarthikRaj07/react-app'
     }
