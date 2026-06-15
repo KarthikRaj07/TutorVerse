@@ -15,7 +15,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git 'https://github.com/KarthikRaj07/TutorVerse.git'
+                git branch: 'main', url: 'https://github.com/KarthikRaj07/TutorVerse.git'
             }
         }
 
