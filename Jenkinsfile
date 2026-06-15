@@ -21,20 +21,17 @@ pipeline {
 
         stage('Build Images') {
             steps {
-                script {
-                    docker.build("${BACKEND_IMAGE}:latest", "./backend")
-                    docker.build("${FRONTEND_IMAGE}:latest", "./frontend")
-                }
+                sh "docker build -t ${BACKEND_IMAGE}:latest ./backend"
+                sh "docker build -t ${FRONTEND_IMAGE}:latest ./frontend"
             }
         }
 
         stage('Push Images') {
             steps {
-                script {
-                    docker.withRegistry('', DOCKERHUB_CREDENTIALS) {
-                        docker.image("${BACKEND_IMAGE}:latest").push()
-                        docker.image("${FRONTEND_IMAGE}:latest").push()
-                    }
+                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+                    sh "docker push ${BACKEND_IMAGE}:latest"
+                    sh "docker push ${FRONTEND_IMAGE}:latest"
                 }
             }
         }
