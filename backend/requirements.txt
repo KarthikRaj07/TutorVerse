@@ -6,3 +6,7 @@ python-dotenv
 pinecone
 requests
 httpx
+pypdf
+langchain
+langchain-community
+langchain-text-splitters

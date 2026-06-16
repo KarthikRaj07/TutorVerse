@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pinecone import Pinecone, ServerlessSpec
 from contextlib import asynccontextmanager
+from langchain_community.embeddings import OllamaEmbeddings
 
 load_dotenv()
 
@@ -94,17 +95,26 @@ class HealthResponse(BaseModel):
 # ──────────────────────────────────────────────
 # Utilities
 # ──────────────────────────────────────────────
+# Initialize Ollama embeddings client
+embeddings_model = OllamaEmbeddings(
+    model="mxbai-embed-large",
+    base_url=OLLAMA_URL
+)
+
 def text_to_vector(text: str) -> List[float]:
     """
-    Simple deterministic pseudo-embedding using SHA-256 hashing.
-    Replace with a real embedding model (e.g. sentence-transformers) in production.
+    Get 1024-dimensional embedding using Ollama's mxbai-embed-large model,
+    with a deterministic SHA-256 fallback if the LLM service is offline.
     """
-    digest = hashlib.sha256(text.encode()).digest()
-    # Stretch 32 bytes → 768 floats by repeating and normalising
-    raw = list(digest) * (EMBED_DIM // 32 + 1)
-    raw = raw[:EMBED_DIM]
-    total = sum(raw) or 1
-    return [v / total for v in raw]
+    try:
+        return embeddings_model.embed_query(text)
+    except Exception as e:
+        print(f"Warning: Failed to get Ollama embedding: {e}. Using fallback pseudo-embedding.")
+        digest = hashlib.sha256(text.encode()).digest()
+        raw = list(digest) * (EMBED_DIM // 32 + 1)
+        raw = raw[:EMBED_DIM]
+        total = sum(raw) or 1
+        return [v / total for v in raw]
 
 
 def ollama_generate(prompt: str) -> str:
@@ -126,12 +136,26 @@ def ollama_generate(prompt: str) -> str:
 
 
 def retrieve_context(query: str, subject: str, top_k: int = 3):
-    """Query Pinecone for similar content."""
+    """Query Pinecone for similar content using subject-based namespace partitioning."""
     try:
         idx = get_or_create_index()
         vec = text_to_vector(query)
-        filter_map = {"subject": {"$eq": subject}} if subject != "general" else {}
-        results = idx.query(vector=vec, top_k=top_k, include_metadata=True, filter=filter_map)
+        
+        # Determine namespace: Partition by subject for 'computer_science' or 'english'
+        namespace = subject if subject in ["computer_science", "english"] else ""
+        
+        filter_map = {}
+        # Only use metadata filtering for subjects in the default namespace
+        if not namespace:
+            filter_map = {"subject": {"$eq": subject}} if subject != "general" else {}
+            
+        results = idx.query(
+            vector=vec, 
+            top_k=top_k, 
+            include_metadata=True, 
+            filter=filter_map if filter_map else None,
+            namespace=namespace
+        )
         matches = results.get("matches", [])
         contexts, titles = [], []
         for m in matches:
@@ -141,8 +165,10 @@ def retrieve_context(query: str, subject: str, top_k: int = 3):
             if meta.get("title"):
                 titles.append(meta["title"])
         return contexts, titles
-    except Exception:
+    except Exception as e:
+        print(f"Error retrieving context: {e}")
         return [], []
+
 
 # ──────────────────────────────────────────────
 # Routes
@@ -178,22 +204,25 @@ def health_check():
 
 @app.post("/ingest", response_model=IngestResponse, tags=["knowledge"])
 def ingest_content(req: IngestRequest):
-    """Store educational content into Pinecone vector database."""
+    """Store educational content into Pinecone vector database under the appropriate namespace."""
     idx = get_or_create_index()
     doc_id = str(uuid.uuid4())
     vec = text_to_vector(req.content)
+    namespace = req.subject if req.subject in ["computer_science", "english"] else ""
     idx.upsert(
         vectors=[{
             "id": doc_id,
             "values": vec,
             "metadata": {
-                "content": req.content[:1000],   # Pinecone metadata limit
+                "content": req.content,
                 "subject": req.subject,
                 "title": req.title,
             },
-        }]
+        }],
+        namespace=namespace
     )
-    return IngestResponse(id=doc_id, message=f"Ingested '{req.title}' into subject '{req.subject}'")
+    return IngestResponse(id=doc_id, message=f"Ingested '{req.title}' into subject '{req.subject}' under namespace '{namespace if namespace else 'default'}'")
+
 
 
 @app.post("/chat", response_model=ChatResponse, tags=["chat"])
@@ -232,7 +261,7 @@ def list_subjects():
     return {
         "subjects": [
             "mathematics", "physics", "chemistry", "biology",
-            "history", "geography", "computer_science", "literature",
+            "history", "geography", "computer_science", "english", "literature",
             "economics", "general"
         ]
     }

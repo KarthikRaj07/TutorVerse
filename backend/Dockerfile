@@ -18,8 +18,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application source (excludes venv via .dockerignore)
-COPY main.py .
-COPY .env .
+COPY . .
 
 EXPOSE 8000
 
