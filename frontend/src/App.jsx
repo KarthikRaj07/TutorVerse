@@ -342,12 +342,12 @@ export default function App() {
             <button onClick={() => setShowIngest(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition"
               style={{ background: 'rgba(0,212,170,0.1)', color: '#4dffd7', border: '1px solid rgba(0,212,170,0.3)' }}>
-              📥 Add Material 
+              Add Material 
             </button>
             <button onClick={clearChat}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition"
               style={{ background: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
-              🗑️ Clear
+              Clear
             </button>
           </div>
         </header>
