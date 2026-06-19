@@ -1,15 +1,16 @@
 # ──────────────────────────────────────────────────────────────
-# TutorVerse — Backend Dockerfile
+# TutorVerse — Optimized Backend Dockerfile
 # Stack: Python 3.12 · FastAPI · Uvicorn · Pinecone · Requests
 # ──────────────────────────────────────────────────────────────
 
 FROM python:3.12-slim
 
-# System-level best practices
+# System-level configurations to optimize pip performance and stability
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=1000 \
+    PIP_RETRIES=10
 
 # Expose required environment variables
 ENV PINECONE_API_KEY="" \
@@ -19,11 +20,17 @@ ENV PINECONE_API_KEY="" \
 
 WORKDIR /app
 
-# Install dependencies first (leveraging layer caching)
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install system dependencies if required (like curl for docker healthcheck/pip building)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy application source (excluding venv via .dockerignore)
+# Install dependencies first, leveraging Docker BuildKit cache mount for pip
+COPY requirements.txt .
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
+
+# Copy application source
 COPY . .
 
 # Ensure the entrypoint script is executable
