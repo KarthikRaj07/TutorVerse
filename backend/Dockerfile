@@ -11,16 +11,25 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# Expose required environment variables
+ENV PINECONE_API_KEY="" \
+    PINECONE_ENV="us-east-1" \
+    OLLAMA_BASE_URL="http://ollama:11434" \
+    OLLAMA_MODEL="mistral"
+
 WORKDIR /app
 
-# Install deps first (layer cache: only re-runs when requirements change)
+# Install dependencies first (leveraging layer caching)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application source (excludes venv via .dockerignore)
+# Copy application source (excluding venv via .dockerignore)
 COPY . .
+
+# Ensure the entrypoint script is executable
+RUN chmod +x entrypoint.sh
 
 EXPOSE 8000
 
-# Run with Uvicorn — workers=1 keeps it simple for a single container
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Entrypoint script supports running either the API server or Ingestion pipeline
+ENTRYPOINT ["./entrypoint.sh"]

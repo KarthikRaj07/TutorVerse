@@ -1,6 +1,5 @@
 import os
 import uuid
-import hashlib
 import requests
 from typing import List, Optional
 from dotenv import load_dotenv
@@ -8,42 +7,21 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from pinecone import Pinecone, ServerlessSpec
 from contextlib import asynccontextmanager
-from langchain_community.embeddings import OllamaEmbeddings
+
+from services.rag_pipeline import (
+    pc,
+    OLLAMA_URL,
+    get_or_create_index,
+    text_to_vector
+)
+from routes.chat import router as chat_router
 
 load_dotenv()
 
 # ──────────────────────────────────────────────
-# Config
+# FastAPI app setup with lifespan
 # ──────────────────────────────────────────────
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")
-PINECONE_INDEX   = os.getenv("PINECONE_INDEX", "tutorverse")
-OLLAMA_URL       = os.getenv("OLLAMA_URL", "http://ollama:11434")
-OLLAMA_MODEL     = os.getenv("OLLAMA_MODEL", "llama3")
-EMBED_DIM        = 1024  # Must match the existing Pinecone index dimension
-
-# ──────────────────────────────────────────────
-# FastAPI app
-# ──────────────────────────────────────────────
-pc = Pinecone(api_key=PINECONE_API_KEY)
-index = None # Will be initialized dynamically
-
-def get_or_create_index():
-    global index
-    if index is not None:
-        return index
-    existing = [idx.name for idx in pc.list_indexes()]
-    if PINECONE_INDEX not in existing:
-        pc.create_index(
-            name=PINECONE_INDEX,
-            dimension=EMBED_DIM,
-            metric="cosine",
-            spec=ServerlessSpec(cloud="aws", region="us-east-1"),
-        )
-    index = pc.Index(PINECONE_INDEX)
-    return index
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize index on startup
@@ -53,8 +31,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"Warning: Failed to initialize Pinecone index at startup: {e}")
     yield
-    # Cleanup if needed
-    
+
 app = FastAPI(title="TutorVerse API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
@@ -65,19 +42,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ──────────────────────────────────────────────
-# Pydantic models
-# ──────────────────────────────────────────────
-class ChatRequest(BaseModel):
-    message: str
-    session_id: Optional[str] = None
-    subject: Optional[str] = "general"
+# Include Chat router
+app.include_router(chat_router)
 
-class ChatResponse(BaseModel):
-    reply: str
-    session_id: str
-    sources: List[str] = []
-
+# ──────────────────────────────────────────────
+# Pydantic models for other endpoints
+# ──────────────────────────────────────────────
 class IngestRequest(BaseModel):
     content: str
     subject: str
@@ -91,84 +61,6 @@ class HealthResponse(BaseModel):
     status: str
     pinecone: str
     ollama: str
-
-# ──────────────────────────────────────────────
-# Utilities
-# ──────────────────────────────────────────────
-# Initialize Ollama embeddings client
-embeddings_model = OllamaEmbeddings(
-    model="mxbai-embed-large",
-    base_url=OLLAMA_URL
-)
-
-def text_to_vector(text: str) -> List[float]:
-    """
-    Get 1024-dimensional embedding using Ollama's mxbai-embed-large model,
-    with a deterministic SHA-256 fallback if the LLM service is offline.
-    """
-    try:
-        return embeddings_model.embed_query(text)
-    except Exception as e:
-        print(f"Warning: Failed to get Ollama embedding: {e}. Using fallback pseudo-embedding.")
-        digest = hashlib.sha256(text.encode()).digest()
-        raw = list(digest) * (EMBED_DIM // 32 + 1)
-        raw = raw[:EMBED_DIM]
-        total = sum(raw) or 1
-        return [v / total for v in raw]
-
-
-def ollama_generate(prompt: str) -> str:
-    """Call Ollama /api/generate endpoint (non-streaming)."""
-    try:
-        resp = requests.post(
-            f"{OLLAMA_URL}/api/generate",
-            json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
-            timeout=120,
-        )
-        resp.raise_for_status()
-        return resp.json().get("response", "").strip()
-    except requests.exceptions.ConnectionError:
-        raise HTTPException(status_code=503, detail="Ollama service unavailable")
-    except requests.exceptions.Timeout:
-        raise HTTPException(status_code=504, detail="Ollama timed out")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ollama error: {str(e)}")
-
-
-def retrieve_context(query: str, subject: str, top_k: int = 3):
-    """Query Pinecone for similar content using subject-based namespace partitioning."""
-    try:
-        idx = get_or_create_index()
-        vec = text_to_vector(query)
-        
-        # Determine namespace: Partition by subject for 'computer_science' or 'english'
-        namespace = subject if subject in ["computer_science", "english"] else ""
-        
-        filter_map = {}
-        # Only use metadata filtering for subjects in the default namespace
-        if not namespace:
-            filter_map = {"subject": {"$eq": subject}} if subject != "general" else {}
-            
-        results = idx.query(
-            vector=vec, 
-            top_k=top_k, 
-            include_metadata=True, 
-            filter=filter_map if filter_map else None,
-            namespace=namespace
-        )
-        matches = results.get("matches", [])
-        contexts, titles = [], []
-        for m in matches:
-            meta = m.get("metadata", {})
-            if meta.get("content"):
-                contexts.append(meta["content"])
-            if meta.get("title"):
-                titles.append(meta["title"])
-        return contexts, titles
-    except Exception as e:
-        print(f"Error retrieving context: {e}")
-        return [], []
-
 
 # ──────────────────────────────────────────────
 # Routes
@@ -208,7 +100,7 @@ def ingest_content(req: IngestRequest):
     idx = get_or_create_index()
     doc_id = str(uuid.uuid4())
     vec = text_to_vector(req.content)
-    namespace = req.subject if req.subject in ["computer_science", "english"] else ""
+    namespace = req.subject if req.subject else "general"
     idx.upsert(
         vectors=[{
             "id": doc_id,
@@ -221,38 +113,10 @@ def ingest_content(req: IngestRequest):
         }],
         namespace=namespace
     )
-    return IngestResponse(id=doc_id, message=f"Ingested '{req.title}' into subject '{req.subject}' under namespace '{namespace if namespace else 'default'}'")
-
-
-
-@app.post("/chat", response_model=ChatResponse, tags=["chat"])
-def chat(req: ChatRequest):
-    """
-    RAG pipeline:
-      1. Embed user question
-      2. Retrieve top-k context chunks from Pinecone
-      3. Build augmented prompt
-      4. Generate answer via Ollama llama3
-    """
-    session_id = req.session_id or str(uuid.uuid4())
-
-    # Step 1 & 2 – Retrieve context
-    contexts, sources = retrieve_context(req.message, req.subject)
-
-    # Step 3 – Build prompt
-    context_block = "\n\n".join(contexts) if contexts else "No specific study materials found."
-    prompt = (
-        f"You are TutorVerse, an expert AI tutor. Answer the student's question clearly and concisely.\n"
-        f"Subject: {req.subject}\n\n"
-        f"Relevant Study Material:\n{context_block}\n\n"
-        f"Student Question: {req.message}\n\n"
-        f"Tutor Answer:"
+    return IngestResponse(
+        id=doc_id, 
+        message=f"Ingested '{req.title}' into subject '{req.subject}' under namespace '{namespace}'"
     )
-
-    # Step 4 – LLM response
-    reply = ollama_generate(prompt)
-
-    return ChatResponse(reply=reply, session_id=session_id, sources=sources)
 
 
 @app.get("/subjects", tags=["knowledge"])
@@ -272,6 +136,7 @@ def delete_document(doc_id: str):
     """Delete a document from Pinecone by ID."""
     try:
         idx = get_or_create_index()
+        # Delete from all namespaces or general by default if not parameterized
         idx.delete(ids=[doc_id])
         return {"message": f"Document {doc_id} deleted"}
     except Exception as e:

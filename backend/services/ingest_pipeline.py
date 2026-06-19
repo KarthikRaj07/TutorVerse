@@ -223,7 +223,7 @@ def ingest_all_pdfs():
     data_dir = os.path.join(parent_dir, "data")
     if not os.path.exists(data_dir):
         print(f"Error: Data directory not found at {data_dir}")
-        return
+        sys.exit(1)
         
     pdf_files = [f for f in os.listdir(data_dir) if f.lower().endswith(".pdf")]
     if not pdf_files:
@@ -233,6 +233,7 @@ def ingest_all_pdfs():
     print(f"Found {len(pdf_files)} PDF files in {data_dir}: {pdf_files}")
     
     all_chunks = []
+    has_errors = False
     for pdf_file in pdf_files:
         pdf_path = os.path.join(data_dir, pdf_file)
         try:
@@ -242,7 +243,12 @@ def ingest_all_pdfs():
             print(f"Error processing {pdf_file}: {e}")
             import traceback
             traceback.print_exc()
+            has_errors = True
             
+    if has_errors:
+        print("Ingestion pipeline failed due to errors.")
+        sys.exit(1)
+        
     print(f"\nIngestion pipeline complete. Total chunks created and uploaded: {len(all_chunks)}")
 
 if __name__ == "__main__":
