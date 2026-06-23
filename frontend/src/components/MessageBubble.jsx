@@ -1,58 +1,80 @@
 import React from 'react';
 
+function formatContent(text) {
+  // Bold: **text**
+  return text.split(/(\*\*[^*]+\*\*)/).map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} className="font-bold text-white">{part.slice(2, -2)}</strong>;
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
 export default function MessageBubble({ message }) {
   const isUser = message.role === 'user';
-  const formattedTime = message.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-2 animate-fade-up`}>
-      {/* AI Tutor Avatar */}
-      {!isUser && (
-        <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg mr-4 shrink-0 shadow-lg bg-gradient-to-br from-indigo-600 via-indigo-700 to-cyan-550 border border-indigo-400/20 shadow-indigo-900/20">
-          🎓
-        </div>
-      )}
+    <div className={`flex items-end gap-3 py-2 animate-fade-up ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
 
-      {/* Message Bubble Block */}
+      {/* Avatar */}
       <div
-        className={`max-w-[80%] md:max-w-[70%] px-5 py-4 rounded-3xl shadow-xl border text-sm leading-relaxed transition-all duration-300 ${
+        className="w-8 h-8 rounded-xl flex items-center justify-center text-sm shrink-0 mb-1"
+        style={
           isUser
-            ? 'bg-gradient-to-r from-indigo-600 via-indigo-650 to-purple-650 border-indigo-500/20 text-white rounded-tr-none'
-            : 'bg-slate-900/60 backdrop-blur-2xl border-slate-800/80 text-slate-100 rounded-tl-none'
-        }`}
+            ? { background: 'linear-gradient(135deg, #a855f7, #6366f1)' }
+            : { background: 'linear-gradient(135deg, #6366f1, #22d3ee)' }
+        }
       >
-        <p className="whitespace-pre-wrap font-sans text-slate-200 tracking-wide font-medium">{message.content}</p>
+        {isUser ? '👤' : '🎓'}
+      </div>
 
-        {/* Sources/Citations */}
+      {/* Bubble */}
+      <div className={`max-w-[72%] md:max-w-[65%] space-y-2 ${isUser ? 'items-end' : 'items-start'} flex flex-col`}>
+        <div
+          className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+            isUser
+              ? 'rounded-br-sm text-white'
+              : 'rounded-bl-sm text-slate-200'
+          }`}
+          style={
+            isUser
+              ? {
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  boxShadow: '0 4px 20px rgba(99,102,241,0.25)',
+                }
+              : {
+                  background: 'rgba(255,255,255,0.06)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }
+          }
+        >
+          <p className="whitespace-pre-wrap">{formatContent(message.content)}</p>
+        </div>
+
+        {/* Sources */}
         {!isUser && message.sources && message.sources.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-slate-850 flex flex-wrap gap-2">
-            {message.sources.map((source, index) => (
+          <div className="flex flex-wrap gap-1.5 px-1">
+            {message.sources.map((src, i) => (
               <span
-                key={index}
-                className="text-[10px] px-3 py-1 rounded-full bg-slate-950/80 text-cyan-400 border border-slate-800 flex items-center gap-1.5 font-bold tracking-wide"
+                key={i}
+                className="text-[10px] px-2.5 py-1 rounded-full font-semibold text-cyan-400"
+                style={{
+                  background: 'rgba(34,211,238,0.08)',
+                  border: '1px solid rgba(34,211,238,0.2)',
+                }}
               >
-                📚 {source}
+                📚 {src}
               </span>
             ))}
           </div>
         )}
 
         {/* Timestamp */}
-        <p
-          className={`text-right mt-2 text-[9px] font-bold select-none uppercase tracking-wider ${
-            isUser ? 'text-indigo-200/50' : 'text-slate-500'
-          }`}
-        >
-          {formattedTime}
-        </p>
+        <span className="text-[9px] text-slate-600 px-1 select-none">
+          {message.time}
+        </span>
       </div>
-
-      {/* User Avatar */}
-      {isUser && (
-        <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg ml-4 shrink-0 shadow-lg bg-gradient-to-br from-fuchsia-600 via-purple-650 to-pink-500 border border-fuchsia-450/20 shadow-fuchsia-900/20">
-          👤
-        </div>
-      )}
     </div>
   );
 }
