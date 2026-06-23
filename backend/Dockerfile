@@ -20,10 +20,6 @@ ENV PINECONE_API_KEY="" \
 
 WORKDIR /app
 
-# Install system dependencies if required (like curl for docker healthcheck/pip building)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies first, leveraging Docker BuildKit cache mount for pip
 COPY requirements.txt .

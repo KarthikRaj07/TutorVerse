@@ -25,6 +25,7 @@ services:
 
   # ── FastAPI Backend ───────────────────────────────────────────
   backend:
+    image: karthikraj07/fastapi-app:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -51,6 +52,7 @@ services:
 
   # ── React Frontend (Nginx) ────────────────────────────────────
   frontend:
+    image: karthikraj07/react-app:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile

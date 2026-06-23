@@ -14,3 +14,6 @@ docker compose up --build -d
 
 - Backend: http://localhost:8000
 - Frontend: http://localhost:3000
+
+
+docker exec -it ollama ollama pull llama3.2
