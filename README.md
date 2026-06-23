@@ -16,4 +16,6 @@ docker compose up --build -d
 - Frontend: http://localhost:3000
 
 
+
+llama install cmd
 docker exec -it ollama ollama pull llama3.2
