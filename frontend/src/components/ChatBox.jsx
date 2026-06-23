@@ -3,18 +3,18 @@ import MessageBubble from './MessageBubble';
 import Loader from './Loader';
 
 const QUICK_PROMPTS = [
-  'Explain this concept',
-  'Give me an example',
-  'Quiz me on this topic',
+  'Explain with an example',
+  'Quiz me on this',
   'Summarize key points',
+  'Show step-by-step',
 ];
 
 export default function ChatBox({ messages, input, setInput, onSend, loading, subject }) {
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
-
   const subjectName = subject === 'computer_science' ? 'Computer Science' : 'English';
 
+  /* Auto-scroll on new message */
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
@@ -26,24 +26,20 @@ export default function ChatBox({ messages, input, setInput, onSend, loading, su
     }
   };
 
-  const handleQuickPrompt = (prompt) => {
-    setInput(prompt);
-    textareaRef.current?.focus();
-  };
-
   return (
     <div className="flex flex-col h-full">
 
-      {/* ── Messages Area ── */}
-      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 space-y-1">
+      {/* ── Messages ─────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto px-6 lg:px-16 py-8 space-y-1">
+
         {/* Empty state */}
         {messages.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-center space-y-4 animate-fade-in">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-4xl animate-float"
-              style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
+          <div className="h-full flex flex-col items-center justify-center gap-4 fade-in">
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl float
+              bg-gradient-to-br from-purple-600/20 to-cyan-500/10 border border-purple-500/20">
               🎓
             </div>
-            <p className="text-slate-400 text-sm max-w-xs">Ask your first question to begin the learning session.</p>
+            <p className="text-[#9CA3AF] text-sm">Ask your first question to start learning.</p>
           </div>
         )}
 
@@ -52,45 +48,37 @@ export default function ChatBox({ messages, input, setInput, onSend, loading, su
         ))}
 
         {loading && (
-          <div className="flex items-end gap-3 py-2 animate-fade-up">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #22d3ee)' }}>
-              🎓
-            </div>
+          <div className="flex items-end gap-3 fade-in">
+            <div className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-sm
+              bg-gradient-to-br from-[#7C5CFF] to-[#00D4FF]">✦</div>
             <Loader />
           </div>
         )}
 
-        <div ref={bottomRef} className="h-2" />
+        <div ref={bottomRef} className="h-4" />
       </div>
 
-      {/* ── Input Area ── */}
-      <div className="shrink-0 px-4 md:px-8 py-4 border-t border-white/[0.06]"
-        style={{ background: 'rgba(12,19,34,0.8)', backdropFilter: 'blur(20px)' }}>
+      {/* ── Bottom Input Bar ─────────────────────────────────── */}
+      <div className="shrink-0 border-t border-[rgba(255,255,255,0.06)] bg-[#0B0F1A]/80 backdrop-blur-xl px-6 lg:px-16 py-4">
 
         {/* Quick Prompts */}
         <div className="flex gap-2 flex-wrap mb-3">
           {QUICK_PROMPTS.map((p) => (
             <button
               key={p}
-              onClick={() => handleQuickPrompt(p)}
-              className="px-3 py-1.5 rounded-full text-xs font-medium text-slate-400 border border-white/10 hover:border-indigo-500/40 hover:text-indigo-300 hover:bg-indigo-500/10 transition-all duration-200 cursor-pointer"
+              onClick={() => { setInput(p); textareaRef.current?.focus(); }}
+              className="px-3 py-1.5 rounded-full text-xs font-medium text-[#9CA3AF] cursor-pointer
+                border border-[rgba(255,255,255,0.08)]
+                hover:border-purple-500/40 hover:text-purple-300 hover:bg-purple-500/10
+                transition-all duration-200"
             >
               {p}
             </button>
           ))}
         </div>
 
-        {/* Input bar */}
-        <div
-          className="flex items-end gap-3 rounded-2xl p-3 transition-all duration-300"
-          style={{
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.08)',
-          }}
-          onFocus={(e) => e.currentTarget.style.border = '1px solid rgba(99,102,241,0.4)'}
-          onBlur={(e) => e.currentTarget.style.border = '1px solid rgba(255,255,255,0.08)'}
-        >
+        {/* Input Row */}
+        <div className="input-ring flex items-end gap-3 rounded-2xl bg-[rgba(255,255,255,0.04)] px-4 py-3">
           <textarea
             ref={textareaRef}
             value={input}
@@ -98,32 +86,32 @@ export default function ChatBox({ messages, input, setInput, onSend, loading, su
             onKeyDown={handleKeyDown}
             rows={1}
             placeholder={`Ask anything about ${subjectName}…`}
-            className="flex-1 bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none resize-none leading-relaxed"
-            style={{ maxHeight: '120px', overflowY: 'auto' }}
+            className="flex-1 bg-transparent text-sm text-[#E6EAF2] placeholder-[#4B5563]
+              outline-none resize-none leading-relaxed"
+            style={{ maxHeight: '140px', overflowY: 'auto' }}
           />
 
+          {/* Send Button */}
           <button
             onClick={onSend}
             disabled={loading || !input.trim()}
-            className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg font-bold transition-all duration-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-            style={
-              !loading && input.trim()
-                ? {
-                    background: 'linear-gradient(135deg, #6366f1, #22d3ee)',
-                    boxShadow: '0 0 20px rgba(99,102,241,0.4)',
-                  }
-                : { background: 'rgba(255,255,255,0.08)' }
-            }
+            className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-white
+              transition-all duration-200 font-bold text-lg
+              ${!loading && input.trim()
+                ? 'btn-gradient cursor-pointer'
+                : 'bg-[rgba(255,255,255,0.06)] text-[#4B5563] cursor-not-allowed'
+              }`}
           >
             {loading
-              ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full" style={{ animation: 'spin 0.7s linear infinite' }} />
-              : '↑'
+              ? <span className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white"
+                  style={{ animation: 'spin 0.8s linear infinite' }} />
+              : <span className="text-base">↑</span>
             }
           </button>
         </div>
 
-        <p className="text-center text-[10px] text-slate-600 mt-2">
-          Enter to send · Shift+Enter for new line · Powered by Llama 3 + Pinecone RAG
+        <p className="text-center text-[10px] text-[#4B5563] mt-2.5">
+          Enter to send · Shift+Enter for new line
         </p>
       </div>
     </div>

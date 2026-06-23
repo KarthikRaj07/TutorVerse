@@ -1,97 +1,81 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import GradientButton from '../components/GradientButton';
 
 export default function Landing() {
   const navigate = useNavigate();
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#0f172a]">
+    <div className="relative min-h-screen bg-[#0B0F1A] flex flex-col items-center justify-center overflow-hidden">
 
-      {/* ── Ambient Background Blobs ── */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-indigo-600/20 blur-[120px]" />
-        <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full bg-cyan-500/15 blur-[120px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-purple-600/10 blur-[100px]" />
-      </div>
+      {/* ── Background Effects ─────────────────────────────── */}
+      <div className="absolute inset-0 bg-grid opacity-100 pointer-events-none" />
+      {/* Glow blobs */}
+      <div className="absolute top-[-20%] left-[10%] w-[500px] h-[500px] rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(124,92,255,0.18) 0%, transparent 70%)' }} />
+      <div className="absolute bottom-[-15%] right-[5%] w-[600px] h-[600px] rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(0,212,255,0.12) 0%, transparent 70%)' }} />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#0B0F1A]/80 pointer-events-none" />
 
-      {/* ── Grid Texture ── */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)
-          `,
-          backgroundSize: '48px 48px',
-        }}
-      />
+      {/* ── Content ────────────────────────────────────────── */}
+      <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-3xl mx-auto space-y-8">
 
-      {/* ── Main Content ── */}
-      <div className="relative z-10 flex flex-col items-center text-center px-6 space-y-10 max-w-2xl w-full">
+        {/* Badge */}
+        <div className="fade-up flex items-center gap-2 px-4 py-1.5 rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] backdrop-blur-sm">
+          <span className="w-2 h-2 rounded-full bg-emerald-400" style={{ boxShadow: '0 0 8px #34d399' }} />
+          <span className="text-xs font-medium text-[#9CA3AF]">AI Tutor · Powered by RAG + Llama 3</span>
+        </div>
 
         {/* Logo */}
-        <div className="animate-fade-up animate-float">
-          <div className="relative mx-auto w-24 h-24 rounded-3xl flex items-center justify-center text-5xl"
-            style={{
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #22d3ee)',
-              boxShadow: '0 0 60px rgba(99,102,241,0.4), 0 0 20px rgba(34,211,238,0.2)',
-            }}>
+        <div className="fade-up delay-100 float relative mx-auto">
+          <div className="w-24 h-24 rounded-3xl flex items-center justify-center text-5xl
+            bg-gradient-to-br from-[#7C5CFF] to-[#00D4FF]"
+            style={{ boxShadow: '0 0 60px rgba(124,92,255,0.5), 0 0 120px rgba(0,212,255,0.2)' }}>
             🎓
-            {/* Orbital ring */}
-            <div className="absolute -inset-2 rounded-[28px] border border-indigo-500/30" />
           </div>
+          {/* Outer ring */}
+          <div className="absolute -inset-3 rounded-[32px] border border-purple-500/20 pointer-events-none" />
         </div>
 
         {/* Heading */}
-        <div className="space-y-4 animate-fade-up" style={{ animationDelay: '80ms' }}>
-          <h1 className="text-6xl md:text-7xl font-black tracking-tight gradient-text leading-none">
+        <div className="fade-up delay-200 space-y-4">
+          <h1 className="text-6xl md:text-7xl lg:text-8xl font-black tracking-tighter gradient-text leading-[0.95]">
             TutorVerse
           </h1>
-          <p className="text-lg md:text-xl text-slate-400 font-medium">
+          <p className="text-xl md:text-2xl text-[#E6EAF2] font-medium">
             AI-Powered Learning Assistant
           </p>
-          <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
-            Harness the power of RAG-augmented AI for a personalized, 
-            exam-ready learning experience tailored to your grade.
+          <p className="text-[#9CA3AF] text-base max-w-xl mx-auto leading-relaxed">
+            Study smarter with real-time AI guidance. RAG-augmented answers grounded in your syllabus.
+            Built for 12th-grade students.
           </p>
         </div>
 
-        {/* CTA Card */}
-        <div className="w-full max-w-sm animate-fade-up" style={{ animationDelay: '160ms' }}>
-          <button
+        {/* CTA */}
+        <div className="fade-up delay-300 flex flex-col items-center gap-4 w-full max-w-xs">
+          <GradientButton
+            size="lg"
             onClick={() => navigate('/class')}
-            className="group w-full relative overflow-hidden rounded-2xl p-[1px] cursor-pointer"
-            style={{
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #22d3ee)',
-            }}
+            className="w-full glow-pulse"
           >
-            {/* Inner card */}
-            <div className="relative w-full bg-[#0f172a] rounded-2xl px-8 py-6 flex flex-col items-center gap-3 group-hover:bg-slate-900 transition-colors duration-300">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">📚</span>
-                <div className="text-left">
-                  <div className="text-white font-bold text-lg leading-tight">12th Standard</div>
-                  <div className="text-slate-400 text-xs mt-0.5">Board exam syllabus · 2 subjects</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-sm font-semibold gradient-text group-hover:gap-3 transition-all duration-300">
-                Start Learning
-                <span className="text-cyan-400">→</span>
-              </div>
-            </div>
-          </button>
+            Start Learning →
+          </GradientButton>
+          <p className="text-xs text-[#4B5563]">No sign-up required · Free for students</p>
         </div>
 
-        {/* Stats Row */}
-        <div className="flex items-center gap-8 animate-fade-up" style={{ animationDelay: '240ms' }}>
+        {/* Feature pills */}
+        <div className="fade-up delay-400 flex flex-wrap justify-center gap-3">
           {[
-            { label: 'AI Powered', icon: '⚡' },
-            { label: 'Vector RAG', icon: '🔍' },
-            { label: 'Real-time', icon: '🚀' },
-          ].map((item) => (
-            <div key={item.label} className="flex flex-col items-center gap-1">
-              <span className="text-xl">{item.icon}</span>
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{item.label}</span>
+            { icon: '⚡', label: 'Instant Answers' },
+            { icon: '📚', label: 'Syllabus Grounded' },
+            { icon: '🔒', label: 'Vector Search' },
+            { icon: '🧠', label: 'Llama 3 Model' },
+          ].map((f) => (
+            <div key={f.label}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs text-[#9CA3AF] font-medium
+                border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)]">
+              <span>{f.icon}</span>
+              <span>{f.label}</span>
             </div>
           ))}
         </div>
