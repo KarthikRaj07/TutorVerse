@@ -5,12 +5,17 @@
 # ──────────────────────────────────────────────────────────────
 
 # ── Stage 1: Build ──────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
 # Install deps first (better Docker layer caching)
 COPY package.json package-lock.json ./
+
+# Upgrade Node inside the node:18-alpine image to satisfy Vite 8 engine version requirements
+RUN apk add --no-cache nodejs npm
+ENV PATH="/usr/bin:${PATH}"
+
 RUN npm install
 
 # Copy source and build the Vite + React + Tailwind app

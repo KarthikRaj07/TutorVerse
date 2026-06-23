@@ -19,28 +19,30 @@ pipeline {
     }
 
     stages {
-        stage('Clone') {
+        stage('Clone repo') {
             steps {
                 echo "Cloning the TutorVerse repository..."
                 git branch: 'main', url: 'https://github.com/KarthikRaj07/TutorVerse.git'
             }
         }
 
-        stage('Build Docker image') {
+        stage('Build backend Docker') {
             steps {
-                echo "Building backend and frontend Docker images..."
-                // Enable Docker BuildKit for advanced caching during docker build
-                sh """
-                export DOCKER_BUILDKIT=1
-                docker build -t ${BACKEND_IMAGE}:latest ./backend
-                docker build -t ${FRONTEND_IMAGE}:latest ./frontend
-                """
+                echo "Building backend Docker image..."
+                sh "export DOCKER_BUILDKIT=1 && docker build -t ${BACKEND_IMAGE}:latest ./backend"
             }
         }
 
-        stage('Run container') {
+        stage('Build frontend Docker') {
             steps {
-                echo "Starting TutorVerse containers via Docker Compose..."
+                echo "Building frontend Docker image..."
+                sh "export DOCKER_BUILDKIT=1 && docker build -t ${FRONTEND_IMAGE}:latest ./frontend"
+            }
+        }
+
+        stage('Run backend container') {
+            steps {
+                echo "Starting backend and database containers..."
                 sh """
                 PINECONE_API_KEY=${PINECONE_API_KEY} \
                 PINECONE_ENV=${PINECONE_ENV} \
@@ -54,24 +56,53 @@ pipeline {
                 PINECONE_INDEX=${PINECONE_INDEX} \
                 OLLAMA_BASE_URL=${OLLAMA_BASE_URL} \
                 OLLAMA_MODEL=${OLLAMA_MODEL} \
-                docker compose up --build -d
+                docker compose up -d ollama backend
+                """
+            }
+        }
+
+        stage('Run frontend container') {
+            steps {
+                echo "Starting frontend container..."
+                sh """
+                PINECONE_API_KEY=${PINECONE_API_KEY} \
+                PINECONE_ENV=${PINECONE_ENV} \
+                PINECONE_INDEX=${PINECONE_INDEX} \
+                OLLAMA_BASE_URL=${OLLAMA_BASE_URL} \
+                OLLAMA_MODEL=${OLLAMA_MODEL} \
+                docker compose up -d frontend
                 """
             }
         }
 
         stage('Health check') {
             steps {
-                echo "Verifying backend FastAPI application health..."
+                echo "Verifying application health..."
                 sh """
+                echo "Checking backend FastAPI..."
                 for i in {1..10}; do
                     if curl -s -f http://localhost:8000/health > /dev/null; then
-                        echo "API is healthy and running!"
+                        echo "Backend is healthy!"
+                        break
+                    fi
+                    echo "Waiting for backend (attempt \\\$i/10)..."
+                    sleep 3
+                    if [ \\\$i -eq 10 ]; then
+                        echo "Backend failed health check!"
+                        exit 1
+                    fi
+                done
+
+                echo "Checking frontend Nginx..."
+                for i in {1..5}; do
+                    if curl -s -f http://localhost:3000 > /dev/null; then
+                        echo "Frontend is healthy!"
                         exit 0
                     fi
-                    echo "Waiting for API to become ready (attempt \$i/10)..."
-                    sleep 3
+                    echo "Waiting for frontend (attempt \\\$i/5)..."
+                    sleep 2
                 done
-                echo "Error: API failed health check!"
+                echo "Frontend failed health check!"
                 exit 1
                 """
             }
