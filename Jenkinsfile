@@ -44,13 +44,16 @@ pipeline {
             steps {
                 echo "Starting backend and database containers..."
                 sh """
+                # Force-remove any stale containers that may conflict by name
+                docker rm -f ollama fastapi_app react_app 2>/dev/null || true
+
                 PINECONE_API_KEY=${PINECONE_API_KEY} \
                 PINECONE_ENV=${PINECONE_ENV} \
                 PINECONE_INDEX=${PINECONE_INDEX} \
                 OLLAMA_BASE_URL=${OLLAMA_BASE_URL} \
                 OLLAMA_MODEL=${OLLAMA_MODEL} \
                 docker compose down || true
-                
+
                 PINECONE_API_KEY=${PINECONE_API_KEY} \
                 PINECONE_ENV=${PINECONE_ENV} \
                 PINECONE_INDEX=${PINECONE_INDEX} \
